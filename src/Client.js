@@ -799,24 +799,26 @@ class Client extends EventEmitter {
             });
         } else {
             this.pupPage.on('response', async (res) => {
-                const textContent = await res.text();
-                // Get pairing code expiration time in seconds 
-                if(this.pairingCodeTTL == null && this.options.pairWithPhoneNumber.phoneNumber){
-                    const index = textContent.indexOf('("WAWebAltDeviceLinkingApi",[');
-                    if(index > -1){
-                        const execRegex = (reg) => {
-                            reg.lastIndex = index;
-                            return reg.exec(textContent);
+                try {
+                    const textContent = await res.text();
+                    // Get pairing code expiration time in seconds 
+                    if(this.pairingCodeTTL == null && this.options.pairWithPhoneNumber.phoneNumber){
+                        const index = textContent.indexOf('("WAWebAltDeviceLinkingApi",[');
+                        if(index > -1){
+                            const execRegex = (reg) => {
+                                reg.lastIndex = index;
+                                return reg.exec(textContent);
+                            }
+                            const captureVarName =  execRegex(/.codeGenerationTs>(.+?)\)/g);
+                            // Find last occurrence of the variable definition
+                            const captureValue = execRegex(new RegExp(`${captureVarName[1]}=(\\d+)(?!.*${captureVarName[1]}=.+?codeGenerationTs>)`,"g"));
+                            this.pairingCodeTTL = Number(captureValue[1]);
                         }
-                        const captureVarName =  execRegex(/.codeGenerationTs>(.+?)\)/g);
-                        // Find last occurrence of the variable definition
-                        const captureValue = execRegex(new RegExp(`${captureVarName[1]}=(\\d+)(?!.*${captureVarName[1]}=.+?codeGenerationTs>)`,"g"));
-                        this.pairingCodeTTL = Number(captureValue[1]);
                     }
-                }
-                if(res.ok() && res.url() === WhatsWebURL) {
-                    this.currentIndexHtml = textContent;
-                }
+                    if(res.ok() && res.url() === WhatsWebURL) {
+                        this.currentIndexHtml = textContent;
+                    }
+                } catch (err) {}
             });
         }
     }
